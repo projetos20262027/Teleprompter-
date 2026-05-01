@@ -3,1247 +3,1082 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teleprompter Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/fontsource-roboto@4.0.0/latin.css" rel="stylesheet">
+    <title>Teleprompter Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/fontsource-inter@4.5.0/latin.css" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #1a1a2e;
-            --bg-input: #16213e;
-            --accent: #00d4ff;
-            --accent-hover: #00b8d9;
-            --accent-glow: rgba(0, 212, 255, 0.3);
-            --red: #ff4757;
-            --red-glow: rgba(255, 71, 87, 0.3);
-            --green: #2ed573;
-            --green-glow: rgba(46, 213, 115, 0.3);
-            --text-primary: #e8e8f0;
-            --text-secondary: #8888a0;
-            --border: #2a2a40;
-            --radius: 12px;
+            --bg: #000;
+            --surface: rgba(255,255,255,0.06);
+            --surface-hover: rgba(255,255,255,0.12);
+            --border: rgba(255,255,255,0.1);
+            --text: #fff;
+            --text-dim: rgba(255,255,255,0.45);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59,130,246,0.3);
+            --red: #ef4444;
+            --red-glow: rgba(239,68,68,0.3);
+            --green: #22c55e;
+            --orange: #f59e0b;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Roboto', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        .header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 24px;
+        /* ── Permission Screen ── */
+        #permScreen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            transition: opacity .6s, transform .6s;
+        }
+        #permScreen.gone {
+            opacity: 0;
+            transform: scale(1.08);
+            pointer-events: none;
+        }
+
+        .perm-ring {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, var(--accent), #8b5cf6, var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: spinRing 3s linear infinite;
+            margin-bottom: 36px;
+        }
+        @keyframes spinRing {
+            to { transform: rotate(360deg); }
+        }
+        .perm-ring-inner {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .perm-ring-inner svg { width: 52px; height: 52px; fill: var(--accent); }
+
+        .perm-title {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+        .perm-sub {
+            color: var(--text-dim);
+            font-size: 16px;
+            max-width: 380px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 44px;
+        }
+        .perm-go {
+            padding: 16px 52px;
+            border-radius: 60px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .perm-go:hover {
+            transform: scale(1.06);
+            box-shadow: 0 8px 40px var(--accent-glow);
+        }
+        .perm-err {
+            color: var(--red);
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+            max-width: 360px;
+        }
+
+        /* ── Main App ── */
+        #mainApp {
+            display: none;
+            height: 100vh;
+            position: relative;
+        }
+        #mainApp.on { display: flex; flex-direction: column; }
+
+        #cameraBg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        #cameraBg video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        .cam-vignette {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+        .cam-vignette-top {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 140px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+            z-index: 1;
+            pointer-events: none;
+        }
+        .cam-vignette-bot {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 140px;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ── Top Bar ── */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 10;
+            padding: 14px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
+        }
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .logo i { color: var(--accent); font-style: normal; }
+        .badge {
+            padding: 5px 14px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        /* ── Script Panel ── */
+        #scriptPanel {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 10;
+            transition: transform .45s cubic-bezier(.4,0,.2,1);
+        }
+        #scriptPanel.shrink { transform: translateY(calc(100% - 56px)); }
+
+        .panel-grip {
+            width: 44px;
+            height: 5px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 3px;
+            margin: 10px auto 0;
+            cursor: pointer;
+        }
+
+        .panel-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px 0;
+        }
+        .panel-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+        }
+        .panel-chars {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #scriptBox {
+            width: 100%;
+            min-height: 100px;
+            max-height: 45vh;
+            margin: 8px 0;
+            padding: 0 20px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.7;
+            resize: none;
+            outline: none;
+        }
+        #scriptBox::placeholder { color: var(--text-dim); }
+
+        .panel-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 20px 24px;
+            flex-wrap: wrap;
+        }
+
+        .ctrl {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+        }
+        .ctrl small {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .ctrl .val {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--accent);
+            min-width: 24px;
+            text-align: center;
+        }
+        .cbtn {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s;
+            font-weight: 700;
+        }
+        .cbtn:hover { background: rgba(255,255,255,0.16); }
+
+        .rec-btn {
+            padding: 13px 36px;
+            border-radius: 50px;
+            border: none;
+            background: var(--red);
+            color: #fff;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .rec-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 24px var(--red-glow);
+        }
+        .rec-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* ── Countdown ── */
+        #countdown {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(24px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #countdown.on { display: flex; }
+        .count-num {
+            font-size: 200px;
+            font-weight: 900;
+            color: #fff;
+            animation: popIn .9s ease-out both;
+            text-shadow: 0 0 80px rgba(239,68,68,0.5);
+            line-height: 1;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.2); opacity: 0; }
+            60% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .count-label {
+            font-size: 15px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 20px;
+        }
+
+        /* ── Recording Screen ── */
+        #recScreen {
+            display: none;
+            position: fixed;
+            inset: 0;
             z-index: 100;
         }
+        #recScreen.on { display: block; }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .logo svg {
-            width: 36px;
-            height: 36px;
-        }
-
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 24px;
-        }
-
-        .editor-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        @media (max-width: 900px) {
-            .editor-section {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
-        }
-
-        .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .card-title svg {
-            width: 20px;
-            height: 20px;
-            fill: var(--accent);
-        }
-
-        .text-area {
-            width: 100%;
-            min-height: 280px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            color: var(--text-primary);
-            font-family: 'Roboto', sans-serif;
-            font-size: 16px;
-            line-height: 1.8;
-            padding: 16px;
-            resize: vertical;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        .text-area:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .text-area::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.5;
-        }
-
-        .camera-preview-container {
-            position: relative;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-            min-height: 280px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .camera-preview-container video {
+        #recVideo {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            display: none;
+            transform: scaleX(-1);
         }
 
-        .camera-placeholder {
-            text-align: center;
-            color: var(--text-secondary);
-        }
-
-        .camera-placeholder svg {
-            width: 64px;
-            height: 64px;
-            fill: var(--text-secondary);
-            margin-bottom: 12px;
-            opacity: 0.4;
-        }
-
-        .camera-placeholder p {
-            font-size: 14px;
-            opacity: 0.5;
-        }
-
-        .controls-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 24px;
-            margin-bottom: 24px;
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 24px;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .control-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .control-value {
-            color: var(--accent);
-            font-weight: 700;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 8px;
-            background: var(--bg-input);
-            border-radius: 4px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            box-shadow: 0 0 8px var(--accent-glow);
-            transition: transform 0.2s;
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 0 8px var(--accent-glow);
-        }
-
-        .btn-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 12px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border: none;
-            border-radius: var(--radius);
-            font-family: 'Roboto', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #7c3aed);
-            color: white;
-            box-shadow: 0 4px 15px var(--accent-glow);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--accent-glow);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--red), #e84118);
-            color: white;
-            box-shadow: 0 4px 15px var(--red-glow);
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--red-glow);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, var(--green), #20bf6b);
-            color: white;
-            box-shadow: 0 4px 15px var(--green-glow);
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--green-glow);
-        }
-
-        .btn-secondary {
-            background: var(--bg-input);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            background: var(--bg-secondary);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        /* Teleprompter Overlay */
-        .teleprompter-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            background: #000;
-        }
-
-        .teleprompter-overlay.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tp-top-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 1010;
-            pointer-events: none;
-        }
-
-        .tp-top-bar > * {
-            pointer-events: all;
-        }
-
-        .tp-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .rec-dot {
-            width: 12px;
-            height: 12px;
-            background: var(--red);
-            border-radius: 50%;
-            animation: pulse 1s infinite;
-            display: none;
-        }
-
-        .rec-dot.active {
-            display: block;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .tp-video-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .tp-video-wrapper video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .tp-text-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        .tp-scroll-container {
-            width: 80%;
-            max-width: 900px;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .tp-scroll-inner {
-            position: absolute;
-            width: 100%;
-            will-change: transform;
-            text-align: center;
-            padding: 50vh 20px;
-            transition: none;
-        }
-
-        .tp-text {
-            color: #fff;
-            font-weight: 500;
-            line-height: 1.6;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7);
-            letter-spacing: 0.5px;
-        }
-
-        .tp-gradient-top {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 25%;
+        /* TP overlay */
+        .tp-fade-t {
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 28%;
             background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
             pointer-events: none;
+            z-index: 105;
         }
-
-        .tp-gradient-bottom {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 25%;
+        .tp-fade-b {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 28%;
             background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
             pointer-events: none;
+            z-index: 105;
         }
-
-        .tp-guide-line {
+        .tp-line {
             position: absolute;
-            top: 45%;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: var(--accent);
-            opacity: 0.3;
+            top: 40%;
+            left: 8%;
+            right: 8%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+            z-index: 106;
             pointer-events: none;
         }
 
-        .tp-controls-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
-            padding: 20px;
+        .tp-box {
+            position: absolute;
+            inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 16px;
-            z-index: 1010;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 104;
         }
-
-        .tp-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.1);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
+        .tp-scroll {
+            width: 88%;
+            max-width: 900px;
+            height: 100vh;
+            position: relative;
         }
-
-        .tp-btn:hover {
-            background: rgba(255,255,255,0.2);
-            border-color: var(--accent);
-        }
-
-        .tp-btn svg {
-            width: 24px;
-            height: 24px;
-            fill: white;
-        }
-
-        .tp-btn.record-btn {
-            width: 64px;
-            height: 64px;
-            border-color: var(--red);
-            background: var(--red);
-        }
-
-        .tp-btn.record-btn:hover {
-            background: #ff6b77;
-            border-color: #ff6b77;
-        }
-
-        .tp-btn.record-btn.recording {
-            background: white;
-            border-color: white;
-            animation: pulse 1s infinite;
-        }
-
-        .tp-speed-display {
-            color: var(--accent);
-            font-size: 14px;
-            font-weight: 600;
-            min-width: 50px;
+        .tp-inner {
+            position: absolute;
+            width: 100%;
             text-align: center;
+            will-change: transform;
+            padding: 50vh 12px;
+            transition: opacity .3s;
+        }
+        .tp-inner p {
+            color: #fff;
+            font-weight: 600;
+            line-height: 1.55;
+            text-shadow: 0 0 40px rgba(0,0,0,1), 0 2px 16px rgba(0,0,0,.85);
+            margin-bottom: 1em;
         }
 
-        .progress-bar-container {
-            position: fixed;
-            bottom: 85px;
-            left: 5%;
-            right: 5%;
-            height: 4px;
-            background: rgba(255,255,255,0.1);
+        /* rec top */
+        .rec-top {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 110;
+        }
+        .rec-live {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .rec-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--red);
+            animation: blinkDot 1s infinite;
+        }
+        @keyframes blinkDot {
+            0%,100%{ opacity:1; }
+            50%{ opacity:.25; }
+        }
+        .rec-clock {
+            font-size: 20px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+        }
+        .rec-badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* progress */
+        .tp-prog {
+            position: absolute;
+            bottom: 115px;
+            left: 8%;
+            right: 8%;
+            height: 3px;
+            background: rgba(255,255,255,0.08);
             border-radius: 2px;
-            z-index: 1010;
+            z-index: 110;
             overflow: hidden;
         }
-
-        .progress-bar-fill {
+        .tp-prog-fill {
             height: 100%;
             background: var(--accent);
             border-radius: 2px;
             width: 0%;
-            transition: width 0.1s linear;
         }
 
-        .recordings-section {
-            margin-top: 24px;
-        }
-
-        .recordings-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .recording-item {
+        /* rec bottom bar */
+        .rec-bar {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 16px 16px 32px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px 16px;
+            justify-content: center;
+            gap: 10px;
+            z-index: 110;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
         }
-
-        .recording-item video {
-            width: 160px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: #000;
-        }
-
-        .recording-info {
-            flex: 1;
-        }
-
-        .recording-info h4 {
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        .recording-info p {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .recording-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-primary);
+        .rb {
+            width: 46px; height: 46px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+            transition: background .15s, border-color .15s;
         }
+        .rb:hover { background: rgba(255,255,255,0.12); border-color: var(--accent); }
+        .rb svg { width: 22px; height: 22px; fill: currentColor; }
 
-        .btn-icon:hover {
+        .rb-stop {
+            width: 62px; height: 62px;
+            border-radius: 50%;
+            background: var(--red);
+            border-color: var(--red);
+        }
+        .rb-stop:hover { background: #dc2626; border-color: #dc2626; }
+
+        .rb-rw {
+            background: rgba(59,130,246,0.2);
             border-color: var(--accent);
+        }
+        .rb-rw:hover { background: rgba(59,130,246,0.35); }
+
+        .sp-label {
+            font-size: 13px;
+            font-weight: 800;
             color: var(--accent);
-        }
-
-        .btn-icon svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .flip-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: rgba(0,212,255,0.1);
-            border: 1px solid rgba(0,212,255,0.2);
-            border-radius: 4px;
-            font-size: 11px;
-            color: var(--accent);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .flip-badge:hover {
-            background: rgba(0,212,255,0.2);
-        }
-
-        .mirror-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state {
+            min-width: 38px;
             text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-            opacity: 0.5;
         }
 
-        .toast {
+        /* ── Gallery ── */
+        #gallery {
             position: fixed;
-            bottom: 100px;
+            bottom: 0; left: 0; right: 0;
+            z-index: 15;
+            max-height: 35vh;
+            overflow-y: auto;
+            padding: 16px 20px 24px;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 50%, transparent);
+            display: none;
+        }
+        #gallery.on { display: block; }
+        .gal-head {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+        .gal-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .gal-card {
+            flex-shrink: 0;
+            width: 180px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .gal-card video {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            background: #111;
+            display: block;
+        }
+        .gal-info {
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .gal-info span { font-size: 11px; font-weight: 600; }
+        .gal-dl {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gal-dl svg { width: 15px; height: 15px; fill: currentColor; }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 12px 24px;
-            color: var(--text-primary);
-            font-size: 14px;
+            padding: 10px 22px;
+            background: rgba(20,20,30,0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
             font-weight: 500;
-            z-index: 2000;
+            z-index: 300;
             opacity: 0;
-            transition: all 0.3s;
+            transition: all .3s;
             pointer-events: none;
+            backdrop-filter: blur(12px);
         }
-
-        .toast.show {
+        #toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        @media (max-width: 600px) {
-            .main-container {
-                padding: 12px;
-            }
-            .header {
-                padding: 12px 16px;
-            }
-            .logo {
-                font-size: 18px;
-            }
-            .btn {
-                padding: 12px 20px;
-                font-size: 13px;
-            }
-            .tp-scroll-container {
-                width: 95%;
-            }
-            .recording-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .recording-item video {
-                width: 100%;
-                height: auto;
-            }
+        @media (max-width: 640px) {
+            .perm-title { font-size: 24px; }
+            .perm-ring { width: 110px; height: 110px; }
+            .perm-ring-inner { width: 94px; height: 94px; }
+            .perm-ring-inner svg { width: 40px; height: 40px; }
+            .count-num { font-size: 130px; }
+            .rec-btn { padding: 11px 22px; font-size: 14px; }
+            .rb { width: 40px; height: 40px; }
+            .rb-stop { width: 54px; height: 54px; }
         }
     </style>
 </head>
 <body>
 
-    <header class="header">
-        <div class="logo">
-            <svg viewBox="0 0 36 36" fill="none">
-                <rect x="2" y="6" width="32" height="24" rx="3" stroke="url(#logoGrad)" stroke-width="2.5" fill="none"/>
-                <line x1="10" y1="14" x2="26" y2="14" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
-                <line x1="10" y1="19" x2="22" y2="19" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
-                <line x1="10" y1="24" x2="18" y2="24" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="30" cy="10" r="3" fill="var(--red)"/>
-                <defs>
-                    <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36">
-                        <stop offset="0%" stop-color="#00d4ff"/>
-                        <stop offset="100%" stop-color="#7c3aed"/>
-                    </linearGradient>
-                </defs>
-            </svg>
-            Teleprompter Pro
-        </div>
-    </header>
+<!-- Permission -->
+<div id="permScreen">
+    <div class="perm-ring"><div class="perm-ring-inner">
+        <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+    </div></div>
+    <div class="perm-title">Acesso à Câmera</div>
+    <div class="perm-sub">Permita o acesso à câmera para gravar vídeos em alta qualidade com teleprompter integrado.</div>
+    <button class="perm-go" onclick="goCamera()">Permitir Acesso</button>
+    <div class="perm-err" id="permErr"></div>
+</div>
 
-    <div class="main-container">
-        <div class="editor-section">
-            <div class="card">
-                <div class="card-title">
-                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.41l-2.34-2.34a1.002 1.002 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    Texto do Teleprompter
-                </div>
-                <textarea id="scriptText" class="text-area" placeholder="Cole ou digite seu texto aqui...&#10;&#10;Exemplo: Olá e bem-vindos ao nosso vídeo! Hoje vamos falar sobre um tema muito importante..."></textarea>
-            </div>
+<!-- Main App -->
+<div id="mainApp">
+    <div id="cameraBg">
+        <video id="mainVid" autoplay muted playsinline></video>
+    </div>
+    <div class="cam-vignette"></div>
+    <div class="cam-vignette-top"></div>
+    <div class="cam-vignette-bot"></div>
 
-            <div class="card">
-                <div class="card-title">
-                    <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                    Pré-visualização da Câmera
-                </div>
-                <div class="camera-preview-container" id="cameraPreviewContainer">
-                    <video id="cameraPreview" autoplay muted playsinline></video>
-                    <div class="camera-placeholder" id="cameraPlaceholder">
-                        <svg viewBox="0 0 24 24"><path d="M12 12m-3.2 0a3.2 3.2 0 116.4 0 3.2 3.2 0 11-6.4 0M9 2l-1.4 1.5L2 9l1.5 1.5L9 4l5.5 5.5L16 12l-1.5 1.5L9 4zm6 0l-1.4 1.5L19 9l-1.5 1.5L19 4l-5.5 5.5L8 12l1.5 1.5L15 4z"/></svg>
-                        <p>Ative a câmera para pré-visualizar</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="controls-panel">
-            <div class="controls-grid">
-                <div class="control-group">
-                    <div class="control-label">
-                        Velocidade de Rolagem
-                        <span class="control-value" id="speedValue">5</span>
-                    </div>
-                    <input type="range" id="speedRange" min="1" max="20" value="5" step="1">
-                </div>
-
-                <div class="control-group">
-                    <div class="control-label">
-                        Tamanho da Fonte
-                        <span class="control-value" id="fontSizeValue">32px</span>
-                    </div>
-                    <input type="range" id="fontSizeRange" min="18" max="80" value="32" step="2">
-                </div>
-
-                <div class="control-group">
-                    <div class="control-label">
-                        Espelhar Câmera
-                        <span class="mirror-label" id="mirrorLabel">Desligado</span>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <span class="flip-badge" id="mirrorToggle" onclick="toggleMirror()">Ativar Espelhamento</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="btn-row" style="margin-top: 24px;">
-                <button class="btn btn-secondary" id="btnCamera" onclick="toggleCamera()">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                    Ligar Câmera
-                </button>
-                <button class="btn btn-primary" id="btnStart" onclick="startTeleprompter()" disabled>
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    Iniciar Teleprompter
-                </button>
-            </div>
-        </div>
-
-        <div class="recordings-section">
-            <div class="card">
-                <div class="card-title">
-                    <svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
-                    Gravações
-                </div>
-                <div id="recordingsList" class="recordings-list">
-                    <div class="empty-state" id="emptyRecordings">
-                        Nenhuma gravação ainda. Inicie o teleprompter para gravar!
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="topbar">
+        <div class="logo">Teleprompter <i>Studio</i></div>
+        <div class="badge"><div class="badge-dot"></div><span id="resBadge">—</span></div>
     </div>
 
-    <!-- Teleprompter Overlay -->
-    <div class="teleprompter-overlay" id="teleprompterOverlay">
-        <div class="tp-top-bar">
-            <div class="tp-status">
-                <div class="rec-dot" id="recDot"></div>
-                <span id="statusText">Pronto</span>
+    <!-- Script Panel -->
+    <div id="scriptPanel" class="shrink">
+        <div class="panel-grip" onclick="togglePanel()"></div>
+        <div class="panel-bar">
+            <span class="panel-label">Roteiro</span>
+            <span class="panel-chars" id="charCount">0 caracteres</span>
+        </div>
+        <textarea id="scriptBox" placeholder="Cole ou digite seu texto aqui...&#10;&#10;Sem limite de caracteres.&#10;Pressione os +/− para ajustar velocidade e tamanho da fonte."></textarea>
+        <div class="panel-actions">
+            <div class="ctrl">
+                <small>Vel.</small>
+                <button class="cbtn" onclick="chgSpeed(-1)">−</button>
+                <span class="val" id="speedVal">5</span>
+                <button class="cbtn" onclick="chgSpeed(1)">+</button>
             </div>
-            <button class="btn btn-secondary" onclick="exitTeleprompter()" style="padding: 8px 16px; font-size: 13px;">
-                ✕ Sair
-            </button>
-        </div>
-
-        <div class="tp-video-wrapper">
-            <video id="tpVideo" autoplay muted playsinline></video>
-        </div>
-
-        <div class="tp-text-overlay">
-            <div class="tp-gradient-top"></div>
-            <div class="tp-gradient-bottom"></div>
-            <div class="tp-guide-line"></div>
-            <div class="tp-scroll-container">
-                <div class="tp-scroll-inner" id="tpScrollInner">
-                    <div class="tp-text" id="tpText"></div>
-                </div>
+            <div class="ctrl">
+                <small>Fonte</small>
+                <button class="cbtn" onclick="chgFont(-2)">−</button>
+                <span class="val" id="fontVal">32</span>
+                <button class="cbtn" onclick="chgFont(2)">+</button>
             </div>
-        </div>
-
-        <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="progressBar"></div>
-        </div>
-
-        <div class="tp-controls-bar">
-            <button class="tp-btn" onclick="changeSpeed(-1)" title="Diminuir Velocidade">
-                <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
-            </button>
-            <div class="tp-speed-display" id="tpSpeedDisplay">5x</div>
-            <button class="tp-btn" onclick="changeSpeed(1)" title="Aumentar Velocidade">
-                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            </button>
-            <button class="tp-btn" id="tpPauseBtn" onclick="togglePause()" title="Pausar/Continuar">
-                <svg viewBox="0 0 24 24" id="pauseIcon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-            <button class="tp-btn record-btn" id="tpRecordBtn" onclick="toggleRecording()" title="Gravar">
-                <svg viewBox="0 0 24 24" id="recordIcon"><circle cx="12" cy="12" r="8"/></svg>
-            </button>
-            <button class="tp-btn" onclick="resetScroll()" title="Reiniciar Texto">
-                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-            </button>
-            <button class="tp-btn" onclick="changeFontSize(2)" title="Aumentar Fonte">
-                <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
-            </button>
-            <button class="tp-btn" onclick="changeFontSize(-2)" title="Diminuir Fonte">
-                <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
+            <button class="rec-btn" id="goBtn" onclick="startCountdown()">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                Gravar
             </button>
         </div>
     </div>
+</div>
 
-    <div class="toast" id="toast"></div>
+<!-- Countdown -->
+<div id="countdown">
+    <div class="count-num" id="countNum">5</div>
+    <div class="count-label">Preparando gravação</div>
+</div>
 
-    <script>
-        let cameraStream = null;
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let isRecording = false;
-        let isPaused = false;
-        let isCameraOn = false;
-        let scrollPosition = 0;
-        let scrollSpeed = 5;
-        let fontSize = 32;
-        let animationId = null;
-        let isMirrored = false;
-        let recordings = [];
-        let recordingCount = 0;
+<!-- Recording Screen -->
+<div id="recScreen">
+    <video id="recVid" autoplay muted playsinline></video>
 
-        const scriptText = document.getElementById('scriptText');
-        const speedRange = document.getElementById('speedRange');
-        const fontSizeRange = document.getElementById('fontSizeRange');
-        const speedValue = document.getElementById('speedValue');
-        const fontSizeValue = document.getElementById('fontSizeValue');
-        const cameraPreview = document.getElementById('cameraPreview');
-        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
-        const btnCamera = document.getElementById('btnCamera');
-        const btnStart = document.getElementById('btnStart');
+    <div class="tp-fade-t"></div>
+    <div class="tp-fade-b"></div>
+    <div class="tp-line"></div>
 
-        speedRange.addEventListener('input', () => {
-            scrollSpeed = parseInt(speedRange.value);
-            speedValue.textContent = scrollSpeed;
+    <div class="tp-box">
+        <div class="tp-scroll">
+            <div class="tp-inner" id="tpInner"></div>
+        </div>
+    </div>
+
+    <div class="rec-top">
+        <div class="rec-live">
+            <div class="rec-dot"></div>
+            <span class="rec-clock" id="recClock">00:00</span>
+        </div>
+        <span class="rec-badge" id="recBadge">4K</span>
+    </div>
+
+    <div class="tp-prog"><div class="tp-prog-fill" id="tpFill"></div></div>
+
+    <div class="rec-bar">
+        <button class="rb" onclick="chgRecSpeed(-1)" title="Velocidade −">
+            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+        </button>
+        <span class="sp-label" id="recSpd">5x</span>
+        <button class="rb" onclick="chgRecSpeed(1)" title="Velocidade +">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+
+        <button class="rb" id="tpVisBtn" onclick="toggleTP()" title="Teleprompter on/off">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        </button>
+
+        <button class="rb rb-rw" onclick="rewindTP()" title="Voltar ao início">
+            <svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+        </button>
+
+        <button class="rb" onclick="chgRecFont(-2)" title="Fonte −">
+            <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
+        </button>
+        <button class="rb" onclick="chgRecFont(2)" title="Fonte +">
+            <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
+        </button>
+
+        <button class="rb rb-stop" onclick="stopRec()" title="Parar">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- Gallery -->
+<div id="gallery">
+    <div class="gal-head">Gravações</div>
+    <div class="gal-list" id="galList"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════ STATE ═══════════════════ */
+let stream = null;
+let recorder = null;
+let chunks = [];
+let recording = false;
+let recStart = 0;
+let recTimer = null;
+let tpPos = 0;
+let tpSpeed = 5;
+let tpFont = 32;
+let tpShow = true;
+let tpRAF = null;
+let clips = [];
+let clipN = 0;
+let panelUp = true;
+let vw = 1920, vh = 1080;
+let mimeType = 'video/webm';
+
+/* ═══════════════════ ELEMENTS ═══════════════════ */
+const $perm     = document.getElementById('permScreen');
+const $app      = document.getElementById('mainApp');
+const $mainVid  = document.getElementById('mainVid');
+const $box      = document.getElementById('scriptBox');
+const $count    = document.getElementById('charCount');
+const $badge    = document.getElementById('resBadge');
+const $panel    = document.getElementById('scriptPanel');
+const $countdown= document.getElementById('countdown');
+const $countNum = document.getElementById('countNum');
+const $rec      = document.getElementById('recScreen');
+const $recVid   = document.getElementById('recVid');
+const $tp       = document.getElementById('tpInner');
+const $clock    = document.getElementById('recClock');
+const $recBadge = document.getElementById('recBadge');
+const $fill     = document.getElementById('tpFill');
+const $gal      = document.getElementById('gallery');
+const $galList  = document.getElementById('galList');
+
+/* ═══════════════════ CHAR COUNT ═══════════════════ */
+$box.addEventListener('input', () => {
+    $count.textContent = $box.value.length.toLocaleString('pt-BR') + ' caracteres';
+});
+
+/* ═══════════════════ CAMERA ═══════════════════ */
+async function goCamera() {
+    const err = document.getElementById('permErr');
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 3840 }, height: { ideal: 2160 } },
+            audio: true
         });
 
-        fontSizeRange.addEventListener('input', () => {
-            fontSize = parseInt(fontSizeRange.value);
-            fontSizeValue.textContent = fontSize + 'px';
+        const vt = stream.getVideoTracks()[0];
+        const s = vt.getSettings();
+        vw = s.width  || 1920;
+        vh = s.height || 1080;
+        $badge.textContent = vw + '×' + vh;
+        $recBadge.textContent = vw >= 3840 ? '4K' : vh + 'p';
+
+        /* pick best mimeType */
+        for (const t of [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4'
+        ]) {
+            if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+        }
+
+        $mainVid.srcObject = stream;
+        $perm.classList.add('gone');
+        setTimeout(() => { $perm.style.display = 'none'; $app.classList.add('on'); toast('Câmera ' + vw + '×' + vh); }, 600);
+    } catch (e) {
+        err.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.';
+        err.style.display = 'block';
+    }
+}
+
+/* ═══════════════════ PANEL ═══════════════════ */
+function togglePanel() {
+    panelUp = !panelUp;
+    $panel.classList.toggle('shrink', !panelUp);
+}
+
+/* ═══════════════════ CONTROLS ═══════════════════ */
+function chgSpeed(d) {
+    tpSpeed = clamp(tpSpeed + d, 1, 20);
+    document.getElementById('speedVal').textContent = tpSpeed;
+}
+function chgFont(d) {
+    tpFont = clamp(tpFont + d, 18, 80);
+    document.getElementById('fontVal').textContent = tpFont;
+}
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+/* ═══════════════════ COUNTDOWN ═══════════════════ */
+function startCountdown() {
+    if (!$box.value.trim()) { toast('Digite o roteiro antes de gravar.'); return; }
+    $panel.classList.add('shrink');
+    panelUp = false;
+
+    $countdown.classList.add('on');
+    let n = 5;
+    $countNum.textContent = n;
+    $countNum.style.animation = 'none';
+    void $countNum.offsetHeight;
+    $countNum.style.animation = 'popIn .9s ease-out both';
+
+    const iv = setInterval(() => {
+        n--;
+        if (n > 0) {
+            $countNum.textContent = n;
+            $countNum.style.animation = 'none';
+            void $countNum.offsetHeight;
+            $countNum.style.animation = 'popIn .9s ease-out both';
+        } else {
+            clearInterval(iv);
+            $countdown.classList.remove('on');
+            beginRec();
+        }
+    }, 1000);
+}
+
+/* ═══════════════════ RECORDING ═══════════════════ */
+function beginRec() {
+    recording = true;
+    chunks = [];
+
+    /* video element */
+    $recVid.srcObject = stream;
+
+    /* teleprompter text */
+    const lines = $box.value.trim().split('\n');
+    $tp.innerHTML = lines.filter(l => l.trim()).map(l => '<p>' + escHTML(l) + '</p>').join('');
+    $tp.style.fontSize = tpFont + 'px';
+
+    /* reset */
+    tpPos = 0;
+    $tp.style.transform = 'translateY(0px)';
+    $fill.style.width = '0%';
+    tpShow = true;
+    $tp.style.opacity = '1';
+
+    $rec.classList.add('on');
+
+    /* start recorder */
+    startRecorder();
+
+    /* scroll */
+    tpScrollLoop();
+
+    /* timer */
+    recStart = Date.now();
+    recTimer = setInterval(tickClock, 1000);
+
+    toast('Gravando!');
+}
+
+function startRecorder() {
+    const opts = {
+        mimeType: mimeType,
+        videoBitsPerSecond: 50000000,
+        audioBitsPerSecond: 320000
+    };
+    try {
+        recorder = new MediaRecorder(stream, opts);
+    } catch(e) {
+        try {
+            recorder = new MediaRecorder(stream, { videoBitsPerSecond: 50000000, audioBitsPerSecond: 320000 });
+        } catch(e2) {
+            recorder = new MediaRecorder(stream);
+        }
+    }
+
+    /* CRITICAL: collect chunks reliably */
+    recorder.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) {
+            chunks.push(ev.data);
+        }
+    };
+
+    recorder.onstop = () => {
+        /* Build blob from ALL accumulated chunks */
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'video/webm' });
+
+        if (blob.size < 1000) {
+            toast('Erro: gravação vazia. Tente novamente.');
+            return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        clipN++;
+
+        clips.unshift({
+            id: clipN,
+            url,
+            blob,
+            dur: $clock.textContent,
+            res: $recBadge.textContent,
+            ts: new Date().toLocaleString('pt-BR')
         });
 
-        async function toggleCamera() {
-            if (isCameraOn) {
-                stopCamera();
-            } else {
-                await startCamera();
-            }
+        drawGallery();
+        toast('Gravação #' + clipN + ' salva (' + clips[0].dur + ')');
+    };
+
+    /* request data every 200ms for reliable capture */
+    recorder.start(200);
+}
+
+function tickClock() {
+    const el = Math.floor((Date.now() - recStart) / 1000);
+    const m = String(Math.floor(el / 60)).padStart(2, '0');
+    const s = String(el % 60).padStart(2, '0');
+    $clock.textContent = m + ':' + s;
+}
+
+function tpScrollLoop() {
+    if (tpRAF) cancelAnimationFrame(tpRAF);
+    function step() {
+        tpPos += tpSpeed * 0.4;
+        const maxS = $tp.scrollHeight - window.innerHeight;
+        if (maxS > 0) {
+            $fill.style.width = Math.min(tpPos / maxS * 100, 100) + '%';
+        } else {
+            $fill.style.width = '100%';
         }
+        $tp.style.transform = 'translateY(' + (-tpPos) + 'px)';
+        tpRAF = requestAnimationFrame(step);
+    }
+    tpRAF = requestAnimationFrame(step);
+}
 
-        async function startCamera() {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
-                    audio: true
-                });
-                cameraPreview.srcObject = cameraStream;
-                cameraPreview.style.display = 'block';
-                cameraPlaceholder.style.display = 'none';
-                isCameraOn = true;
-                btnCamera.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> Desligar Câmera`;
-                btnStart.disabled = false;
-                showToast('Câmera ativada com sucesso!');
-            } catch (err) {
-                console.error('Erro ao acessar câmera:', err);
-                showToast('Erro ao acessar a câmera. Verifique as permissões.');
-            }
-        }
+/* ═══════════════════ REC CONTROLS ═══════════════════ */
+function chgRecSpeed(d) {
+    tpSpeed = clamp(tpSpeed + d, 1, 20);
+    document.getElementById('recSpd').textContent = tpSpeed + 'x';
+}
+function chgRecFont(d) {
+    tpFont = clamp(tpFont + d, 18, 80);
+    $tp.style.fontSize = tpFont + 'px';
+}
+function rewindTP() {
+    tpPos = 0;
+    $tp.style.transform = 'translateY(0px)';
+    $fill.style.width = '0%';
+    toast('Texto reiniciado');
+}
+function toggleTP() {
+    tpShow = !tpShow;
+    $tp.style.opacity = tpShow ? '1' : '0';
+    document.querySelector('.tp-line').style.opacity = tpShow ? '1' : '0';
+    document.querySelector('.tp-prog').style.opacity = tpShow ? '1' : '0';
+}
 
-        function stopCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
-            }
-            cameraPreview.srcObject = null;
-            cameraPreview.style.display = 'none';
-            cameraPlaceholder.style.display = 'block';
-            isCameraOn = false;
-            btnCamera.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> Ligar Câmera`;
-            btnStart.disabled = true;
-        }
+function stopRec() {
+    recording = false;
+    if (tpRAF) cancelAnimationFrame(tpRAF);
+    if (recTimer) clearInterval(recTimer);
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    $rec.classList.remove('on');
+    $recVid.srcObject = null;
+    $clock.textContent = '00:00';
 
-        function toggleMirror() {
-            isMirrored = !isMirrored;
-            const toggle = document.getElementById('mirrorToggle');
-            const label = document.getElementById('mirrorLabel');
+    /* reopen panel */
+    $panel.classList.remove('shrink');
+    panelUp = true;
+}
 
-            if (isMirrored) {
-                toggle.textContent = 'Desativar Espelhamento';
-                label.textContent = 'Ligado';
-                cameraPreview.style.transform = 'scaleX(-1)';
-            } else {
-                toggle.textContent = 'Ativar Espelhamento';
-                label.textContent = 'Desligado';
-                cameraPreview.style.transform = 'scaleX(1)';
-            }
-        }
+/* ═══════════════════ GALLERY ═══════════════════ */
+function drawGallery() {
+    if (!clips.length) { $gal.classList.remove('on'); return; }
+    $gal.classList.add('on');
+    $galList.innerHTML = clips.map(c =>
+        '<div class="gal-card">' +
+            '<video src="' + c.url + '" preload="metadata" playsinline></video>' +
+            '<div class="gal-info">' +
+                '<span>#' + c.id + ' ' + c.dur + '<br><small style="color:var(--text-dim)">' + c.res + '</small></span>' +
+                '<button class="gal-dl" onclick="dlClip(' + c.id + ')"><svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>' +
+            '</div>' +
+        '</div>'
+    ).join('');
+}
 
-        function startTeleprompter() {
-            const text = scriptText.value.trim();
-            if (!text) {
-                showToast('Por favor, insira um texto para o teleprompter.');
-                return;
-            }
+function dlClip(id) {
+    const c = clips.find(x => x.id === id);
+    if (!c) return;
+    const ext = c.blob.type.includes('mp4') ? 'mp4' : 'webm';
+    const a = document.createElement('a');
+    a.href = c.url;
+    a.download = 'teleprompter-' + c.id + '.' + ext;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('Download iniciado');
+}
 
-            if (!isCameraOn) {
-                showToast('Por favor, ligue a câmera primeiro.');
-                return;
-            }
+/* ═══════════════════ TOAST ═══════════════════ */
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
 
-            const overlay = document.getElementById('teleprompterOverlay');
-            const tpVideo = document.getElementById('tpVideo');
-            const tpText = document.getElementById('tpText');
-            const tpScrollInner = document.getElementById('tpScrollInner');
+/* ═══════════════════ ESC HTML ═══════════════════ */
+function escHTML(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-            // Setup video in overlay
-            tpVideo.srcObject = cameraStream;
-            if (isMirrored) {
-                tpVideo.style.transform = 'scaleX(-1)';
-            } else {
-                tpVideo.style.transform = 'scaleX(1)';
-            }
-
-            // Setup text
-            const paragraphs = text.split('\n');
-            tpText.innerHTML = paragraphs.map(p => `<p style="margin-bottom: 1em;">${p}</p>`).join('');
-            tpText.style.fontSize = fontSize + 'px';
-
-            // Reset scroll
-            scrollPosition = 0;
-            tpScrollInner.style.transform = `translateY(0px)`;
-
-            overlay.classList.add('active');
-
-            // Start auto scroll
-            startScrolling();
-        }
-
-        function startScrolling() {
-            isPaused = false;
-            updatePauseIcon();
-            animateScroll();
-        }
-
-        function animateScroll() {
-            const tpScrollInner = document.getElementById('tpScrollInner');
-            const tpText = document.getElementById('tpText');
-
-            function step() {
-                if (!isPaused) {
-                    scrollPosition += scrollSpeed * 0.5;
-                    const totalHeight = tpScrollInner.scrollHeight;
-                    const containerHeight = window.innerHeight;
-                    const maxScroll = totalHeight - containerHeight;
-
-                    if (maxScroll > 0) {
-                        const progress = Math.min(scrollPosition / maxScroll, 1) * 100;
-                        document.getElementById('progressBar').style.width = progress + '%';
-                    }
-
-                    tpScrollInner.style.transform = `translateY(${-scrollPosition}px)`;
-                }
-                animationId = requestAnimationFrame(step);
-            }
-
-            animationId = requestAnimationFrame(step);
-        }
-
-        function togglePause() {
-            isPaused = !isPaused;
-            updatePauseIcon();
-        }
-
-        function updatePauseIcon() {
-            const icon = document.getElementById('pauseIcon');
-            if (isPaused) {
-                icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-            } else {
-                icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-            }
-        }
-
-        function changeSpeed(delta) {
-            scrollSpeed = Math.max(1, Math.min(20, scrollSpeed + delta));
-            speedRange.value = scrollSpeed;
-            speedValue.textContent = scrollSpeed;
-            document.getElementById('tpSpeedDisplay').textContent = scrollSpeed + 'x';
-        }
-
-        function changeFontSize(delta) {
-            fontSize = Math.max(18, Math.min(80, fontSize + delta));
-            fontSizeRange.value = fontSize;
-            fontSizeValue.textContent = fontSize + 'px';
-            document.getElementById('tpText').style.fontSize = fontSize + 'px';
-        }
-
-        function resetScroll() {
-            scrollPosition = 0;
-            document.getElementById('tpScrollInner').style.transform = `translateY(0px)`;
-            document.getElementById('progressBar').style.width = '0%';
-            showToast('Texto reiniciado');
-        }
-
-        function toggleRecording() {
-            if (!isRecording) {
-                startRecording();
-            } else {
-                stopRecording();
-            }
-        }
-
-        function startRecording() {
-            recordedChunks = [];
-            const options = { mimeType: 'video/webm;codecs=vp9,opus' };
-
-            try {
-                mediaRecorder = new MediaRecorder(cameraStream, options);
-            } catch (e) {
-                try {
-                    mediaRecorder = new MediaRecorder(cameraStream, { mimeType: 'video/webm' });
-                } catch (e2) {
-                    mediaRecorder = new MediaRecorder(cameraStream);
-                }
-            }
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    recordedChunks.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                recordingCount++;
-                const now = new Date();
-                const timestamp = now.toLocaleString('pt-BR');
-                const duration = now.toLocaleTimeString('pt-BR');
-
-                recordings.push({
-                    id: recordingCount,
-                    url: url,
-                    blob: blob,
-                    timestamp: timestamp,
-                    name: `Gravação #${recordingCount}`
-                });
-
-                renderRecordings();
-            };
-
-            mediaRecorder.start(100);
-            isRecording = true;
-
-            document.getElementById('recDot').classList.add('active');
-            document.getElementById('statusText').textContent = 'Gravando...';
-            document.getElementById('tpRecordBtn').classList.add('recording');
-            document.getElementById('recordIcon').innerHTML = '<rect x="8" y="8" width="8" height="8" rx="1"/>';
-            showToast('Gravação iniciada!');
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            isRecording = false;
-
-            document.getElementById('recDot').classList.remove('active');
-            document.getElementById('statusText').textContent = 'Pronto';
-            document.getElementById('tpRecordBtn').classList.remove('recording');
-            document.getElementById('recordIcon').innerHTML = '<circle cx="12" cy="12" r="8"/>';
-            showToast('Gravação finalizada!');
-        }
-
-        function renderRecordings() {
-            const container = document.getElementById('recordingsList');
-            const empty = document.getElementById('emptyRecordings');
-
-            if (recordings.length > 0 && empty) {
-                empty.style.display = 'none';
-            }
-
-            container.innerHTML = recordings.map(rec => `
-                <div class="recording-item" id="rec-${rec.id}">
-                    <video src="${rec.url}" controls preload="metadata"></video>
-                    <div class="recording-info">
-                        <h4>${rec.name}</h4>
-                        <p>${rec.timestamp}</p>
-                    </div>
-                    <div class="recording-actions">
-                        <button class="btn-icon" onclick="downloadRecording(${rec.id})" title="Baixar">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                        </button>
-                        <button class="btn-icon" onclick="deleteRecording(${rec.id})" title="Excluir">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"/></svg>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function downloadRecording(id) {
-            const rec = recordings.find(r => r.id === id);
-            if (rec) {
-                const a = document.createElement('a');
-                a.href = rec.url;
-                a.download = `teleprompter-${rec.id}.webm`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                showToast('Download iniciado!');
-            }
-        }
-
-        function deleteRecording(id) {
-            const rec = recordings.find(r => r.id === id);
-            if (rec) {
-                URL.revokeObjectURL(rec.url);
-                recordings = recordings.filter(r => r.id !== id);
-                renderRecordings();
-                if (recordings.length === 0) {
-                    document.getElementById('recordingsList').innerHTML = `<div class="empty-state" id="emptyRecordings">Nenhuma gravação ainda. Inicie o teleprompter para gravar!</div>`;
-                }
-                showToast('Gravação excluída!');
-            }
-        }
-
-        function exitTeleprompter() {
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            if (isRecording) {
-                stopRecording();
-            }
-
-            const overlay = document.getElementById('teleprompterOverlay');
-            overlay.classList.remove('active');
-
-            const tpVideo = document.getElementById('tpVideo');
-            tpVideo.srcObject = null;
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        // Keyboard shortcuts in teleprompter mode
-        document.addEventListener('keydown', (e) => {
-            const overlay = document.getElementById('teleprompterOverlay');
-            if (!overlay.classList.contains('active')) return;
-
-            switch (e.key) {
-                case ' ':
-                    e.preventDefault();
-                    togglePause();
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    changeSpeed(1);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    changeSpeed(-1);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    changeFontSize(2);
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    changeFontSize(-2);
-                    break;
-                case 'r':
-                case 'R':
-                    toggleRecording();
-                    break;
-                case 'Escape':
-                    exitTeleprompter();
-                    break;
-            }
-        });
-    </script>
+/* ═══════════════════ KEYBOARD ═══════════════════ */
+document.addEventListener('keydown', (e) => {
+    if (!recording) return;
+    if (e.key === ' ') { e.preventDefault(); if (tpRAF) { cancelAnimationFrame(tpRAF); tpRAF = null; toast('Pausado'); } else { tpScrollLoop(); toast('Continuando'); } }
+    if (e.key === 'ArrowUp')    { e.preventDefault(); chgRecSpeed(1); }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); chgRecSpeed(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); chgRecFont(2); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); chgRecFont(-2); }
+    if (e.key === 'Home')       { e.preventDefault(); rewindTP(); }
+    if (e.key === 't' || e.key === 'T') toggleTP();
+    if (e.key === 'Escape')     stopRec();
+});
+</script>
 </body>
 </html>
 
