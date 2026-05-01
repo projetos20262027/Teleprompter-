@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/fontsource-roboto@4.0.0/latin.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-input: #16213e;
+            --accent: #00d4ff;
+            --accent-hover: #00b8d9;
+            --accent-glow: rgba(0, 212, 255, 0.3);
+            --red: #ff4757;
+            --red-glow: rgba(255, 71, 87, 0.3);
+            --green: #2ed573;
+            --green-glow: rgba(46, 213, 115, 0.3);
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a0;
+            --border: #2a2a40;
+            --radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .editor-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .editor-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-title svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--accent);
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 280px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            padding: 16px;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .text-area:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .text-area::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .camera-preview-container {
+            position: relative;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            min-height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-preview-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .camera-placeholder svg {
+            width: 64px;
+            height: 64px;
+            fill: var(--text-secondary);
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        .camera-placeholder p {
+            font-size: 14px;
+            opacity: 0.5;
+        }
+
+        .controls-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-value {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent-glow);
+            transition: transform 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'Roboto', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: white;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--red), #e84118);
+            color: white;
+            box-shadow: 0 4px 15px var(--red-glow);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--red-glow);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--green), #20bf6b);
+            color: white;
+            box-shadow: 0 4px 15px var(--green-glow);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--green-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Teleprompter Overlay */
+        .teleprompter-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: #000;
+        }
+
+        .teleprompter-overlay.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tp-top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1010;
+            pointer-events: none;
+        }
+
+        .tp-top-bar > * {
+            pointer-events: all;
+        }
+
+        .tp-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .rec-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+            display: none;
+        }
+
+        .rec-dot.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .tp-video-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .tp-video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .tp-text-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .tp-scroll-container {
+            width: 80%;
+            max-width: 900px;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tp-scroll-inner {
+            position: absolute;
+            width: 100%;
+            will-change: transform;
+            text-align: center;
+            padding: 50vh 20px;
+            transition: none;
+        }
+
+        .tp-text {
+            color: #fff;
+            font-weight: 500;
+            line-height: 1.6;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7);
+            letter-spacing: 0.5px;
+        }
+
+        .tp-gradient-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 25%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            pointer-events: none;
+        }
+
+        .tp-gradient-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 25%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            pointer-events: none;
+        }
+
+        .tp-guide-line {
+            position: absolute;
+            top: 45%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .tp-controls-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 1010;
+        }
+
+        .tp-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tp-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: var(--accent);
+        }
+
+        .tp-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .tp-btn.record-btn {
+            width: 64px;
+            height: 64px;
+            border-color: var(--red);
+            background: var(--red);
+        }
+
+        .tp-btn.record-btn:hover {
+            background: #ff6b77;
+            border-color: #ff6b77;
+        }
+
+        .tp-btn.record-btn.recording {
+            background: white;
+            border-color: white;
+            animation: pulse 1s infinite;
+        }
+
+        .tp-speed-display {
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .progress-bar-container {
+            position: fixed;
+            bottom: 85px;
+            left: 5%;
+            right: 5%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            z-index: 1010;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .recordings-section {
+            margin-top: 24px;
+        }
+
+        .recordings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .recording-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+        }
+
+        .recording-item video {
+            width: 160px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .recording-info {
+            flex: 1;
+        }
+
+        .recording-info h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .recording-info p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .recording-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .flip-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(0,212,255,0.1);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .flip-badge:hover {
+            background: rgba(0,212,255,0.2);
+        }
+
+        .mirror-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 24px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @media (max-width: 600px) {
+            .main-container {
+                padding: 12px;
+            }
+            .header {
+                padding: 12px 16px;
+            }
+            .logo {
+                font-size: 18px;
+            }
+            .btn {
+                padding: 12px 20px;
+                font-size: 13px;
+            }
+            .tp-scroll-container {
+                width: 95%;
+            }
+            .recording-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .recording-item video {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="logo">
+            <svg viewBox="0 0 36 36" fill="none">
+                <rect x="2" y="6" width="32" height="24" rx="3" stroke="url(#logoGrad)" stroke-width="2.5" fill="none"/>
+                <line x1="10" y1="14" x2="26" y2="14" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="10" y1="19" x2="22" y2="19" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="10" y1="24" x2="18" y2="24" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="30" cy="10" r="3" fill="var(--red)"/>
+                <defs>
+                    <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36">
+                        <stop offset="0%" stop-color="#00d4ff"/>
+                        <stop offset="100%" stop-color="#7c3aed"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            Teleprompter Pro
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="editor-section">
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.41l-2.34-2.34a1.002 1.002 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    Texto do Teleprompter
+                </div>
+                <textarea id="scriptText" class="text-area" placeholder="Cole ou digite seu texto aqui...&#10;&#10;Exemplo: Olá e bem-vindos ao nosso vídeo! Hoje vamos falar sobre um tema muito importante..."></textarea>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    Pré-visualização da Câmera
+                </div>
+                <div class="camera-preview-container" id="cameraPreviewContainer">
+                    <video id="cameraPreview" autoplay muted playsinline></video>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <svg viewBox="0 0 24 24"><path d="M12 12m-3.2 0a3.2 3.2 0 116.4 0 3.2 3.2 0 11-6.4 0M9 2l-1.4 1.5L2 9l1.5 1.5L9 4l5.5 5.5L16 12l-1.5 1.5L9 4zm6 0l-1.4 1.5L19 9l-1.5 1.5L19 4l-5.5 5.5L8 12l1.5 1.5L15 4z"/></svg>
+                        <p>Ative a câmera para pré-visualizar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <div class="control-label">
+                        Velocidade de Rolagem
+                        <span class="control-value" id="speedValue">5</span>
+                    </div>
+                    <input type="range" id="speedRange" min="1" max="20" value="5" step="1">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        Tamanho da Fonte
+                        <span class="control-value" id="fontSizeValue">32px</span>
+                    </div>
+                    <input type="range" id="fontSizeRange" min="18" max="80" value="32" step="2">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        Espelhar Câmera
+                        <span class="mirror-label" id="mirrorLabel">Desligado</span>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <span class="flip-badge" id="mirrorToggle" onclick="toggleMirror()">Ativar Espelhamento</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row" style="margin-top: 24px;">
+                <button class="btn btn-secondary" id="btnCamera" onclick="toggleCamera()">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    Ligar Câmera
+                </button>
+                <button class="btn btn-primary" id="btnStart" onclick="startTeleprompter()" disabled>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    Iniciar Teleprompter
+                </button>
+            </div>
+        </div>
+
+        <div class="recordings-section">
+            <div class="card">
+                <div class="card-title">
+                    <svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
+                    Gravações
+                </div>
+                <div id="recordingsList" class="recordings-list">
+                    <div class="empty-state" id="emptyRecordings">
+                        Nenhuma gravação ainda. Inicie o teleprompter para gravar!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teleprompter Overlay -->
+    <div class="teleprompter-overlay" id="teleprompterOverlay">
+        <div class="tp-top-bar">
+            <div class="tp-status">
+                <div class="rec-dot" id="recDot"></div>
+                <span id="statusText">Pronto</span>
+            </div>
+            <button class="btn btn-secondary" onclick="exitTeleprompter()" style="padding: 8px 16px; font-size: 13px;">
+                ✕ Sair
+            </button>
+        </div>
+
+        <div class="tp-video-wrapper">
+            <video id="tpVideo" autoplay muted playsinline></video>
+        </div>
+
+        <div class="tp-text-overlay">
+            <div class="tp-gradient-top"></div>
+            <div class="tp-gradient-bottom"></div>
+            <div class="tp-guide-line"></div>
+            <div class="tp-scroll-container">
+                <div class="tp-scroll-inner" id="tpScrollInner">
+                    <div class="tp-text" id="tpText"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+
+        <div class="tp-controls-bar">
+            <button class="tp-btn" onclick="changeSpeed(-1)" title="Diminuir Velocidade">
+                <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+            </button>
+            <div class="tp-speed-display" id="tpSpeedDisplay">5x</div>
+            <button class="tp-btn" onclick="changeSpeed(1)" title="Aumentar Velocidade">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </button>
+            <button class="tp-btn" id="tpPauseBtn" onclick="togglePause()" title="Pausar/Continuar">
+                <svg viewBox="0 0 24 24" id="pauseIcon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button class="tp-btn record-btn" id="tpRecordBtn" onclick="toggleRecording()" title="Gravar">
+                <svg viewBox="0 0 24 24" id="recordIcon"><circle cx="12" cy="12" r="8"/></svg>
+            </button>
+            <button class="tp-btn" onclick="resetScroll()" title="Reiniciar Texto">
+                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+            <button class="tp-btn" onclick="changeFontSize(2)" title="Aumentar Fonte">
+                <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
+            </button>
+            <button class="tp-btn" onclick="changeFontSize(-2)" title="Diminuir Fonte">
+                <svg viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let cameraStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let isPaused = false;
+        let isCameraOn = false;
+        let scrollPosition = 0;
+        let scrollSpeed = 5;
+        let fontSize = 32;
+        let animationId = null;
+        let isMirrored = false;
+        let recordings = [];
+        let recordingCount = 0;
+
+        const scriptText = document.getElementById('scriptText');
+        const speedRange = document.getElementById('speedRange');
+        const fontSizeRange = document.getElementById('fontSizeRange');
+        const speedValue = document.getElementById('speedValue');
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const btnCamera = document.getElementById('btnCamera');
+        const btnStart = document.getElementById('btnStart');
+
+        speedRange.addEventListener('input', () => {
+            scrollSpeed = parseInt(speedRange.value);
+            speedValue.textContent = scrollSpeed;
+        });
+
+        fontSizeRange.addEventListener('input', () => {
+            fontSize = parseInt(fontSizeRange.value);
+            fontSizeValue.textContent = fontSize + 'px';
+        });
+
+        async function toggleCamera() {
+            if (isCameraOn) {
+                stopCamera();
+            } else {
+                await startCamera();
+            }
+        }
+
+        async function startCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: true
+                });
+                cameraPreview.srcObject = cameraStream;
+                cameraPreview.style.display = 'block';
+                cameraPlaceholder.style.display = 'none';
+                isCameraOn = true;
+                btnCamera.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> Desligar Câmera`;
+                btnStart.disabled = false;
+                showToast('Câmera ativada com sucesso!');
+            } catch (err) {
+                console.error('Erro ao acessar câmera:', err);
+                showToast('Erro ao acessar a câmera. Verifique as permissões.');
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            cameraPreview.srcObject = null;
+            cameraPreview.style.display = 'none';
+            cameraPlaceholder.style.display = 'block';
+            isCameraOn = false;
+            btnCamera.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> Ligar Câmera`;
+            btnStart.disabled = true;
+        }
+
+        function toggleMirror() {
+            isMirrored = !isMirrored;
+            const toggle = document.getElementById('mirrorToggle');
+            const label = document.getElementById('mirrorLabel');
+
+            if (isMirrored) {
+                toggle.textContent = 'Desativar Espelhamento';
+                label.textContent = 'Ligado';
+                cameraPreview.style.transform = 'scaleX(-1)';
+            } else {
+                toggle.textContent = 'Ativar Espelhamento';
+                label.textContent = 'Desligado';
+                cameraPreview.style.transform = 'scaleX(1)';
+            }
+        }
+
+        function startTeleprompter() {
+            const text = scriptText.value.trim();
+            if (!text) {
+                showToast('Por favor, insira um texto para o teleprompter.');
+                return;
+            }
+
+            if (!isCameraOn) {
+                showToast('Por favor, ligue a câmera primeiro.');
+                return;
+            }
+
+            const overlay = document.getElementById('teleprompterOverlay');
+            const tpVideo = document.getElementById('tpVideo');
+            const tpText = document.getElementById('tpText');
+            const tpScrollInner = document.getElementById('tpScrollInner');
+
+            // Setup video in overlay
+            tpVideo.srcObject = cameraStream;
+            if (isMirrored) {
+                tpVideo.style.transform = 'scaleX(-1)';
+            } else {
+                tpVideo.style.transform = 'scaleX(1)';
+            }
+
+            // Setup text
+            const paragraphs = text.split('\n');
+            tpText.innerHTML = paragraphs.map(p => `<p style="margin-bottom: 1em;">${p}</p>`).join('');
+            tpText.style.fontSize = fontSize + 'px';
+
+            // Reset scroll
+            scrollPosition = 0;
+            tpScrollInner.style.transform = `translateY(0px)`;
+
+            overlay.classList.add('active');
+
+            // Start auto scroll
+            startScrolling();
+        }
+
+        function startScrolling() {
+            isPaused = false;
+            updatePauseIcon();
+            animateScroll();
+        }
+
+        function animateScroll() {
+            const tpScrollInner = document.getElementById('tpScrollInner');
+            const tpText = document.getElementById('tpText');
+
+            function step() {
+                if (!isPaused) {
+                    scrollPosition += scrollSpeed * 0.5;
+                    const totalHeight = tpScrollInner.scrollHeight;
+                    const containerHeight = window.innerHeight;
+                    const maxScroll = totalHeight - containerHeight;
+
+                    if (maxScroll > 0) {
+                        const progress = Math.min(scrollPosition / maxScroll, 1) * 100;
+                        document.getElementById('progressBar').style.width = progress + '%';
+                    }
+
+                    tpScrollInner.style.transform = `translateY(${-scrollPosition}px)`;
+                }
+                animationId = requestAnimationFrame(step);
+            }
+
+            animationId = requestAnimationFrame(step);
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            updatePauseIcon();
+        }
+
+        function updatePauseIcon() {
+            const icon = document.getElementById('pauseIcon');
+            if (isPaused) {
+                icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            } else {
+                icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            }
+        }
+
+        function changeSpeed(delta) {
+            scrollSpeed = Math.max(1, Math.min(20, scrollSpeed + delta));
+            speedRange.value = scrollSpeed;
+            speedValue.textContent = scrollSpeed;
+            document.getElementById('tpSpeedDisplay').textContent = scrollSpeed + 'x';
+        }
+
+        function changeFontSize(delta) {
+            fontSize = Math.max(18, Math.min(80, fontSize + delta));
+            fontSizeRange.value = fontSize;
+            fontSizeValue.textContent = fontSize + 'px';
+            document.getElementById('tpText').style.fontSize = fontSize + 'px';
+        }
+
+        function resetScroll() {
+            scrollPosition = 0;
+            document.getElementById('tpScrollInner').style.transform = `translateY(0px)`;
+            document.getElementById('progressBar').style.width = '0%';
+            showToast('Texto reiniciado');
+        }
+
+        function toggleRecording() {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        function startRecording() {
+            recordedChunks = [];
+            const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+
+            try {
+                mediaRecorder = new MediaRecorder(cameraStream, options);
+            } catch (e) {
+                try {
+                    mediaRecorder = new MediaRecorder(cameraStream, { mimeType: 'video/webm' });
+                } catch (e2) {
+                    mediaRecorder = new MediaRecorder(cameraStream);
+                }
+            }
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                recordingCount++;
+                const now = new Date();
+                const timestamp = now.toLocaleString('pt-BR');
+                const duration = now.toLocaleTimeString('pt-BR');
+
+                recordings.push({
+                    id: recordingCount,
+                    url: url,
+                    blob: blob,
+                    timestamp: timestamp,
+                    name: `Gravação #${recordingCount}`
+                });
+
+                renderRecordings();
+            };
+
+            mediaRecorder.start(100);
+            isRecording = true;
+
+            document.getElementById('recDot').classList.add('active');
+            document.getElementById('statusText').textContent = 'Gravando...';
+            document.getElementById('tpRecordBtn').classList.add('recording');
+            document.getElementById('recordIcon').innerHTML = '<rect x="8" y="8" width="8" height="8" rx="1"/>';
+            showToast('Gravação iniciada!');
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+
+            document.getElementById('recDot').classList.remove('active');
+            document.getElementById('statusText').textContent = 'Pronto';
+            document.getElementById('tpRecordBtn').classList.remove('recording');
+            document.getElementById('recordIcon').innerHTML = '<circle cx="12" cy="12" r="8"/>';
+            showToast('Gravação finalizada!');
+        }
+
+        function renderRecordings() {
+            const container = document.getElementById('recordingsList');
+            const empty = document.getElementById('emptyRecordings');
+
+            if (recordings.length > 0 && empty) {
+                empty.style.display = 'none';
+            }
+
+            container.innerHTML = recordings.map(rec => `
+                <div class="recording-item" id="rec-${rec.id}">
+                    <video src="${rec.url}" controls preload="metadata"></video>
+                    <div class="recording-info">
+                        <h4>${rec.name}</h4>
+                        <p>${rec.timestamp}</p>
+                    </div>
+                    <div class="recording-actions">
+                        <button class="btn-icon" onclick="downloadRecording(${rec.id})" title="Baixar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        </button>
+                        <button class="btn-icon" onclick="deleteRecording(${rec.id})" title="Excluir">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function downloadRecording(id) {
+            const rec = recordings.find(r => r.id === id);
+            if (rec) {
+                const a = document.createElement('a');
+                a.href = rec.url;
+                a.download = `teleprompter-${rec.id}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showToast('Download iniciado!');
+            }
+        }
+
+        function deleteRecording(id) {
+            const rec = recordings.find(r => r.id === id);
+            if (rec) {
+                URL.revokeObjectURL(rec.url);
+                recordings = recordings.filter(r => r.id !== id);
+                renderRecordings();
+                if (recordings.length === 0) {
+                    document.getElementById('recordingsList').innerHTML = `<div class="empty-state" id="emptyRecordings">Nenhuma gravação ainda. Inicie o teleprompter para gravar!</div>`;
+                }
+                showToast('Gravação excluída!');
+            }
+        }
+
+        function exitTeleprompter() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            if (isRecording) {
+                stopRecording();
+            }
+
+            const overlay = document.getElementById('teleprompterOverlay');
+            overlay.classList.remove('active');
+
+            const tpVideo = document.getElementById('tpVideo');
+            tpVideo.srcObject = null;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Keyboard shortcuts in teleprompter mode
+        document.addEventListener('keydown', (e) => {
+            const overlay = document.getElementById('teleprompterOverlay');
+            if (!overlay.classList.contains('active')) return;
+
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    togglePause();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    changeSpeed(1);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    changeSpeed(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    changeFontSize(2);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    changeFontSize(-2);
+                    break;
+                case 'r':
+                case 'R':
+                    toggleRecording();
+                    break;
+                case 'Escape':
+                    exitTeleprompter();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
+
